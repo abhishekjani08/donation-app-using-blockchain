@@ -1,0 +1,292 @@
+<html>
+  <head>
+    <title>Payment APP</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.3/dist/web3.min.js"></script>
+    <style>
+      /* Styling for the popup window */
+      #popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #ffffff;
+        padding: 20px;
+        border: 1px solid #000000;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+      }
+      
+      /* Style for the transparent card */
+      .card {
+        /* From https://css.glass */
+        background: rgba(135, 206, 250, 0.21);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border: 1px solid rgba(135, 206, 250, 0.3);
+        height:95%;
+        width: 75%;
+      }
+
+      /* 5 */
+      .btn-5 {
+        width: 130px;
+        height: 40px;
+        line-height: 42px;
+        padding: 0;
+        border: none;
+        /* Updated gradient colors to blue */
+        background: rgb(0, 123, 255);
+        background: linear-gradient(0deg, rgba(0, 123, 255, 1) 0%, rgba(0, 174, 255, 1) 100%);
+      }
+      .btn-5:hover {
+        color: #f0094a;
+        background: transparent;
+        box-shadow: none;
+      }
+      .btn-5:before,
+      .btn-5:after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 2px;
+        width: 0;
+        background: #f0094a;
+        box-shadow: -1px -1px 5px 0px #0000ff, 7px 7px 20px 0px #0003, 4px 4px 5px 0px #0002;
+        transition: 400ms ease all;
+      }
+      .btn-5:after {
+        right: inherit;
+        top: inherit;
+        left: 0;
+        bottom: 0;
+      }
+      .btn-5:hover:before,
+      .btn-5:hover:after {
+        width: 100%;
+        transition: 800ms ease all;
+      }
+      .custom-btn2 {
+      display: inline-block;
+      padding: 12px 24px;
+      font-size: 16px;
+      color: #ffffff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .custom-btn2:hover {
+      background-color: #0056b3;
+    }
+
+ 
+    </style>
+  </head>
+  <body style="background-color:#FAF0E6"><br>
+    <center>
+      <div class="card">
+        <h1>Welcome to Donation Payment System!</h1>
+        <button id='connectWallet' onclick=""class="custom-btn2">Connect Wallet</button>
+        <button id='getBalance' onclick="checkBalance()"class="custom-btn2">Get Balance of Wallet</button>
+
+        <p id="walletAddress"></p>
+        <p id="walletBalance"></p>
+
+        <!-- New input fields for transfer -->
+        
+        <input type="text" id="recipientAddress" placeholder="Recipient Address" value="0xe3Cb51C220529fbF1d64A3a022501FFA25504666" disabled="disabled"><br><br>
+        <input type="text" id="transferAmount" placeholder="Enter Amount"style="width: 300px;
+            height: 40px;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 25px;
+            " ><br><br>
+        <button id='transferFunds' onclick="transferFunds()" Style="
+        display: inline-block;
+        padding: 12px 24px;
+        font-size: 16px;
+        color: #ffffff;
+        background: linear-gradient(45deg, #007bff, #00bfff);
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        ">Transfer Funds</button>
+        <p id="transferStatus"></p>
+        <p>-----OR-----</p>
+        <p>If you dont have a account</p>
+        <img src="{{ url_for('static', filename='images/QR.png') }}"  style="max-width: 150px;max-height: 150px;" alt="QR Code">
+        <p>Else, click <a href="https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn">here</a>.</p>
+      </div>
+
+      <!--Code for POPUP -->
+      <div id="popup">
+        <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+        <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_6LimOm.json"  background="transparent"  speed="1"  style="width: 300px; height: 300px;"    autoplay></lottie-player>
+        <h2>Transaction Details</h2>
+        <p id="popupAmount"></p>
+        <p id="popupTxId"></p>
+        <button class="custom-btn btn-5" onclick="copyTxId()">Copy</button> <!-- New button -->
+        <button class="custom-btn btn-5" onclick="closePopup()">Close</button>
+      </div>
+
+     <!-- ... Existing HTML code ... -->
+
+<script src="https://cdn.jsdelivr.net/npm/web3@1.5.3/dist/web3.min.js"></script>
+
+<script type="text/javascript">
+  // Define a global variable to store the user's wallet address
+  window.userWalletAddress = null;
+  const connectWallet = document.getElementById('connectWallet');
+  const walletAddress = document.getElementById('walletAddress');
+  const walletBalance = document.getElementById('walletBalance');
+  const popup = document.getElementById('popup');
+  const popupAmount = document.getElementById('popupAmount');
+  const popupTxId = document.getElementById('popupTxId');
+
+  // Function to connect the wallet with MetaMask and initialize Web3
+  async function connectWalletwithMetaMask() {
+    if (window.ethereum) {
+      window.web3 = new Web3(window.ethereum);
+
+      try {
+        // Request access to the user's accounts
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        window.userWalletAddress = accounts[0];
+        walletAddress.innerText = window.userWalletAddress;
+
+        connectWallet.innerText = 'Sign Out';
+        connectWallet.removeEventListener('click', connectWalletwithMetaMask);
+        setTimeout(() => {
+          connectWallet.addEventListener('click', signOutOfMetaMask);
+        }, 200);
+      } catch (error) {
+        console.error('Failed to connect to wallet:', error);
+      }
+    } else {
+      console.error('Web3 not available.');
+    }
+  }
+
+  // Function to sign out of MetaMask
+  function signOutOfMetaMask() {
+    window.userWalletAddress = null;
+    walletAddress.innerText = '';
+    connectWallet.innerText = 'Connect Wallet';
+
+    connectWallet.removeEventListener('click', signOutOfMetaMask);
+    setTimeout(() => {
+      connectWallet.addEventListener('click', connectWalletwithMetaMask);
+    }, 200);
+  }
+
+  // Function to check the wallet balance
+  async function checkBalance() {
+    if (window.userWalletAddress) {
+      try {
+        const balance = await window.web3.eth.getBalance(window.userWalletAddress);
+        walletBalance.innerText = window.web3.utils.fromWei(balance, 'ether');
+      } catch (error) {
+        console.error('Failed to get wallet balance:', error);
+      }
+    }
+  }
+
+  // Function to transfer funds
+  async function transferFunds() {
+    const recipientAddress = document.getElementById('recipientAddress').value;
+    const transferAmount = document.getElementById('transferAmount').value;
+
+    if (!recipientAddress || !transferAmount) {
+      return;
+    }
+
+    if (window.userWalletAddress) {
+      try {
+        const transactionParameters = {
+          from: window.userWalletAddress,
+          to: recipientAddress,
+          value: window.web3.utils.toWei(transferAmount, 'ether')
+        };
+
+        const txHash = await window.web3.eth.sendTransaction(transactionParameters);
+        
+        // Display the transaction details in the popup
+        popupAmount.innerText = `Amount: ${transferAmount} ETH`;
+        popupTxId.innerText = `Transaction ID: ${txHash}`;
+        popup.style.display = 'block';
+      } catch (error) {
+        document.getElementById('transferStatus').innerText = `Error: ${error.message}`;
+      }
+    } else {
+      console.error('Wallet not connected.');
+    }
+  }
+
+  // Function to close the popup
+  function closePopup() {
+    popup.style.display = 'none';
+  }
+
+  // Event listener when the DOM content is loaded to check if MetaMask is installed
+  window.addEventListener('DOMContentLoaded', () => {
+    connectWallet.addEventListener('click', connectWalletwithMetaMask);
+    checkBalance();
+
+    // Add event listeners to the buttons
+    document.getElementById('checkBalanceBtn').addEventListener('click', checkBalance);
+    document.getElementById('transferFundsBtn').addEventListener('click', transferFunds);
+    document.getElementById('closePopupBtn').addEventListener('click', closePopup);
+  });
+
+  // Function to transfer funds
+        async function transferFunds() {
+          const recipientAddress = document.getElementById('recipientAddress').value;
+          const transferAmount = document.getElementById('transferAmount').value;
+
+          if (!recipientAddress || !transferAmount) {
+            return;
+          }
+
+          const transactionParameters = {
+            from: window.userWalletAddress,
+            to: recipientAddress,
+            value: '0x' + (parseInt(transferAmount * Math.pow(10, 18)).toString(16))
+          };
+
+          try {
+            const txHash = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [transactionParameters]
+            });
+            // Display the transaction details in the popup
+            popupAmount.innerText = `Amount: ${transferAmount}`;
+            popupTxId.innerText = `Transaction ID: ${txHash}`;
+            popup.style.display = 'block';
+          } catch (error) {
+            document.getElementById('transferStatus').innerText = `Error: ${error.message}`;
+          }
+        }
+
+   function copyTxId() {
+    const txId = popupTxId.innerText;
+    navigator.clipboard.writeText(txId)
+      .then(() => {
+        alert('Transaction ID copied to clipboard!');
+      })
+      .catch((error) => {
+        console.error('Failed to copy transaction ID:', error);
+      });
+  }
+</script>
+
+    </center>
+  </body>
+</html>

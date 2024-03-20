@@ -7,7 +7,7 @@ The Payment APP is a Flask-based web application that enables users to transfer 
 ## Installation and Setup
 
 1. Clone the repository:
-git clone https://github.com/Churanta/Blockchain-based-Charity-Donation-Platform.git
+git clone https://github.com/abhishekjani08/donation-app-using-blockchain.git
 2. Open app.py
 3. Create a virtual network  `python -m venv venv`
 4. Install all dependencies using `pip install -r requirements.txt`
